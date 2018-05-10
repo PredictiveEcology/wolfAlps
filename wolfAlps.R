@@ -7,7 +7,7 @@ defineModule(sim, list(
   authors = c(person("Sarah", "Bauduin", email="sarahbauduin@hotmail.fr", role=c("aut", "cre")),
               person("Eliot", "McIntire", email="eliot.mcintire@canada.ca", role=c("aut", "cre"))),
   childModules = character(),
-  version = numeric_version("1.1.4.9012"),
+  version = numeric_version("1.2.0"),
   spatialExtent = raster::extent(rep(NA_real_, 4)), # raster::extent(raster(paste(inputDir, "/HabitatSuitability.asc", sep = ""))),
   timeframe = as.POSIXlt(c(NA, NA)), # as.POSIXlt(c(0, 14)),
   timeunit = "year", # e.g., "year",
@@ -38,79 +38,78 @@ defineModule(sim, list(
     defineParameter("PackArea", "numeric", 256, NA, NA, "Maximum number of cells for a territory to be established"),
     defineParameter("run.tests", "logical", FALSE, NA, NA, "Should tests be run")
   ),
-  inputObjects = data.frame(
-    objectName = c("wolves2008", # wolves initial locations in 2008
-                   "packs2008", # pack locations in 2008
-                   "CMR", # CMR data
-                   "HabitatSuitability"), # wolf habitat suitability for the Italian Alps
-    objectClass = c("raster", "raster", "raster", "raster"),
-    sourceURL = "",
-    other = rep(NA_character_, 4),
-    stringsAsFactors = FALSE
+  inputObjects = bind_rows(
+    expectsInput(objectName = "wolves2008", objectClass = "raster", desc = NA, sourceURL = NA),
+    expectsInput(objectName = "packs2008", objectClass = "raster", desc = NA, sourceURL = NA),
+    expectsInput(objectName = "CMR", objectClass = "raster", desc = NA, sourceURL = NA),
+    expectsInput(objectName = "HabitatSuitability", objectClass = "raster", desc = NA, sourceURL = NA)
   ),
-  outputObjects = data.frame(
-    objectName = NA_character_,
-    objectClass = NA_character_,
-    other = NA_character_,
-    stringsAsFactors = FALSE
+  outputObjects = bind_rows(
+    # createsOutput(objectName = NA, objectClass = NA, desc = NA)
   )
 ))
 
 
 ## Event types
 doEvent.wolfAlps = function(sim, eventTime, eventType, debug = FALSE) {
-  if (eventType == "init") {
+  switch(eventType,
+         init = {
 
-    sim <- sim$wolfAlpsInit(sim)
+           sim <- sim$wolfAlpsInit(sim)
 
-    sim <- scheduleEvent(sim, floor(params(sim)$wolfAlps$.saveInitialTime), "wolfAlps", "saveStart")
-    sim <- scheduleEvent(sim, start(sim), "wolfAlps", "yearly")
-    sim <- scheduleEvent(sim, params(sim)$wolfAlps$.plotInitialTime, "wolfAlps", "plot")
-    sim <- scheduleEvent(sim, floor(params(sim)$wolfAlps$.saveInitialTime) + 1 - 0.001, "wolfAlps", "saveEnd")
+           sim <- scheduleEvent(sim, floor(params(sim)$wolfAlps$.saveInitialTime), "wolfAlps", "saveStart")
+           sim <- scheduleEvent(sim, start(sim), "wolfAlps", "yearly")
+           sim <- scheduleEvent(sim, params(sim)$wolfAlps$.plotInitialTime, "wolfAlps", "plot")
+           sim <- scheduleEvent(sim, floor(params(sim)$wolfAlps$.saveInitialTime) + 1 - 0.001, "wolfAlps", "saveEnd")
 
-  } else if (eventType == "plot") {
+         },
+         plot = {
 
-    sim <- sim$wolfAlpsPlot(sim)
-    sim <- scheduleEvent(sim, time(sim, "year") + params(sim)$wolfAlps$.plotInterval, "wolfAlps", "plot")
+           sim <- sim$wolfAlpsPlot(sim)
+           sim <- scheduleEvent(sim, time(sim, "year") + params(sim)$wolfAlps$.plotInterval, "wolfAlps", "plot")
 
-  } else if (eventType == "saveStart") {
+         },
+         saveStart = {
 
-    sim <- sim$wolfAlpsSaveStatPack(sim) # number of individuals and size of territories
-    sim <- sim$wolfAlpsSaveStatSim(sim) # pack numbers, population sizes and number of dead wolves
+           sim <- sim$wolfAlpsSaveStatPack(sim) # number of individuals and size of territories
+           sim <- sim$wolfAlpsSaveStatSim(sim) # pack numbers, population sizes and number of dead wolves
 
-    sim <- scheduleEvent(sim, time(sim, "year") + round(params(sim)$wolfAlps$.saveInterval), "wolfAlps", "saveStart")
+           sim <- scheduleEvent(sim, time(sim, "year") + round(params(sim)$wolfAlps$.saveInterval), "wolfAlps", "saveStart")
 
-  } else if (eventType == "saveEnd") {
+         },
+         saveEnd = {
 
-    sim <- sim$wolfAlpsDistDisp(sim) # dispersal distances
-    sim <- sim$wolfAlpsTerr(sim) # packIDWorld map
+           sim <- sim$wolfAlpsDistDisp(sim) # dispersal distances
+           sim <- sim$wolfAlpsTerr(sim) # packIDWorld map
 
-    sim <- scheduleEvent(sim, time(sim, "year") + round(params(sim)$wolfAlps$.saveInterval), "wolfAlps", "saveEnd")
+           sim <- scheduleEvent(sim, time(sim, "year") + round(params(sim)$wolfAlps$.saveInterval), "wolfAlps", "saveEnd")
 
-  } else if (eventType == "yearly") {
+         },
+         yearly = {
 
-    sim <- sim$wolfAlpsDemography(sim) # age, mortality, create dispersing wolves and turn subordinates adults into alpha
-    sim <- sim$wolfAlpsSaveStatInd(sim) # save wolves information after death but before reproduction
-    sim <- sim$wolfAlpsReproduce(sim) # reproduction
+           sim <- sim$wolfAlpsDemography(sim) # age, mortality, create dispersing wolves and turn subordinates adults into alpha
+           sim <- sim$wolfAlpsSaveStatInd(sim) # save wolves information after death but before reproduction
+           sim <- sim$wolfAlpsReproduce(sim) # reproduction
 
-    sim <- scheduleEvent(sim, time(sim, "year") + 0.001, "wolfAlps", "dispersal")
+           sim <- scheduleEvent(sim, time(sim, "year") + 0.001, "wolfAlps", "dispersal")
 
-    sim <- scheduleEvent(sim, time(sim, "year") + 1, "wolfAlps", "yearly")
+           sim <- scheduleEvent(sim, time(sim, "year") + 1, "wolfAlps", "yearly")
 
-  } else if (eventType == "dispersal") {
+         },
+         dispersal = {
 
-    sim <- sim$wolfAlpsDispersal(sim) # dispersal movement
-    sim <- sim$wolfAlpsEstablish(sim) # join a pack or build a new territory
-    sim <- sim$wolfAlpsSaveTerrSize(sim) # save the size of the new created territories
+           sim <- sim$wolfAlpsDispersal(sim) # dispersal movement
+           sim <- sim$wolfAlpsEstablish(sim) # join a pack or build a new territory
+           sim <- sim$wolfAlpsSaveTerrSize(sim) # save the size of the new created territories
 
-    if(NLcount(NLwith(agents = sim$wolves, var = "dispersing", val = 1)) != 0){
-      sim <- scheduleEvent(sim, time(sim, "year") + 0.01, "wolfAlps", "dispersal")
-    }
+           if(NLcount(NLwith(agents = sim$wolves, var = "dispersing", val = 1)) != 0){
+             sim <- scheduleEvent(sim, time(sim, "year") + 0.01, "wolfAlps", "dispersal")
+           }
 
-  } else {
-    warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
-                  "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
-  }
+         },
+         warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
+                       "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
+  )
   return(invisible(sim))
 }
 
