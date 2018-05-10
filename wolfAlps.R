@@ -54,58 +54,58 @@ defineModule(sim, list(
 doEvent.wolfAlps = function(sim, eventTime, eventType, debug = FALSE) {
   switch(eventType,
          init = {
-           
+
            sim <- sim$wolfAlpsInit(sim)
-           
+
            sim <- scheduleEvent(sim, floor(params(sim)$wolfAlps$.saveInitialTime), "wolfAlps", "saveStart")
            sim <- scheduleEvent(sim, start(sim), "wolfAlps", "yearly")
            sim <- scheduleEvent(sim, params(sim)$wolfAlps$.plotInitialTime, "wolfAlps", "plot")
            sim <- scheduleEvent(sim, floor(params(sim)$wolfAlps$.saveInitialTime) + 1 - 0.001, "wolfAlps", "saveEnd")
-           
+
          },
          plot = {
-           
+
            sim <- sim$wolfAlpsPlot(sim)
            sim <- scheduleEvent(sim, time(sim, "year") + params(sim)$wolfAlps$.plotInterval, "wolfAlps", "plot")
-           
+
          },
          saveStart = {
-           
+
            sim <- sim$wolfAlpsSaveStatPack(sim) # number of individuals and size of territories
            sim <- sim$wolfAlpsSaveStatSim(sim) # pack numbers, population sizes and number of dead wolves
-           
+
            sim <- scheduleEvent(sim, time(sim, "year") + round(params(sim)$wolfAlps$.saveInterval), "wolfAlps", "saveStart")
-           
+
          },
          saveEnd = {
-           
+
            sim <- sim$wolfAlpsDistDisp(sim) # dispersal distances
            sim <- sim$wolfAlpsTerr(sim) # packIDWorld map
-           
+
            sim <- scheduleEvent(sim, time(sim, "year") + round(params(sim)$wolfAlps$.saveInterval), "wolfAlps", "saveEnd")
-           
+
          },
          yearly = {
-           
+
            sim <- sim$wolfAlpsDemography(sim) # age, mortality, create dispersing wolves and turn subordinates adults into alpha
            sim <- sim$wolfAlpsSaveStatInd(sim) # save wolves information after death but before reproduction
            sim <- sim$wolfAlpsReproduce(sim) # reproduction
-           
+
            sim <- scheduleEvent(sim, time(sim, "year") + 0.001, "wolfAlps", "dispersal")
-           
+
            sim <- scheduleEvent(sim, time(sim, "year") + 1, "wolfAlps", "yearly")
-           
+
          },
          dispersal = {
-           
+
            sim <- sim$wolfAlpsDispersal(sim) # dispersal movement
            sim <- sim$wolfAlpsEstablish(sim) # join a pack or build a new territory
            sim <- sim$wolfAlpsSaveTerrSize(sim) # save the size of the new created territories
-           
+
            if(NLcount(NLwith(agents = sim$wolves, var = "dispersing", val = 1)) != 0){
              sim <- scheduleEvent(sim, time(sim, "year") + 0.01, "wolfAlps", "dispersal")
            }
-           
+
          },
          warning(paste("Undefined event type: '", current(sim)[1, "eventType", with = FALSE],
                        "' in module '", current(sim)[1, "moduleName", with = FALSE], "'", sep = ""))
