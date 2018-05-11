@@ -118,14 +118,14 @@ doEvent.wolfAlps = function(sim, eventTime, eventType, debug = FALSE) {
 
 ### Initialization
 wolfAlpsInit <- function(sim) {
-
+  
   # Load the inputs (map data)
   InitialWolves <- sim$wolves2008
   MapOfPacksID <- sim$packs2008
   CMR <- sim$CMR
   HabitatSuitability  <- sim$HabitatSuitability
   HabitatSuitability[HabitatSuitability < 0] <- 0
-
+  
   # Create the world onto which the wolves move using the HabitatSuitability layer
   sim$suitabilityWorld <- createWorld(1, 436, 1, 296, data = values(HabitatSuitability) / 1000) # worldMatrix version
   # Create a rasterLayer version using world2raster to have the same coordinates as the worldMatrix
@@ -136,7 +136,7 @@ wolfAlpsInit <- function(sim) {
   sim$suitabilityValGood <- sim$suitabilityVal
   sim$suitabilityValGood[sim$suitabilityValGood < params(sim)$wolfAlps$MeanPixelQuality] <- 0 # to be used in dispersal
   sim$suitabilityVal[sim$suitabilityVal < params(sim)$wolfAlps$MinPixelQuality] <- 0 # remove cells which don't have a good enough quality, to be used for spread() (establishment)
-
+  
   # Create the wolves
   # Wolves information are extracted from the raster layer so they need to be scaled (same coordinates) like the suitabilityWorld (i.e., transformed into a worldMatrix)
   initialWolvesWorld <- createWorld(1, 436, 1, 296, data = values(InitialWolves)) # wolves initial locations
@@ -144,13 +144,13 @@ wolfAlpsInit <- function(sim) {
   packIDVal[packIDVal == -1] <- 0
   sim$packIDWorld <- createWorld(1, 436, 1, 296, data = packIDVal) # initial pack locations
   CMRWorld <- createWorld(1, 436, 1, 296, data = values(CMR)) # CMR data
-
+  
   # Extract the wolves locations, packID and CMR data
   wolfLoc <- NLwith(world = initialWolvesWorld, agents = patches(initialWolvesWorld), val = 1:61) # 1:61 = wolfID
   wolfID <- of(world = initialWolvesWorld, agents = wolfLoc) # ID in the order of the wolfLoc
   packID <- of(world = sim$packIDWorld, agents = wolfLoc) # packID value for each wolfID
   wolfCMR <- of(world = CMRWorld, agents = wolfLoc) # CMR value for each wolfID
-
+  
   # Create the wolves object
   colnames(wolfLoc) <- c("xcor", "ycor")
   wolves <- createTurtles(n = 61, coords = wolfLoc, breed = "wolf")
@@ -175,9 +175,9 @@ wolfAlpsInit <- function(sim) {
   age <- c(3, 3, 3, 3, 3, 3, 3, 3, 0, 0, -1, -1, -1, -1, 3, 3, -1, -1, 0, 3, 3, -1, -1, 0, -1, -1, 3, 3, 3, 3, 0, 0, 0, -1,
            -1, -1, 3, 3, -1, -1, -1, 3, 3, -1, -1, -1, 0, 3, 3, 0, -1, -1, 3, 3, -1, -1, -1, 0, 0, 3, 3)
   wolves <- turtlesOwn(turtles = wolves, tVar = "age", tVal = age)
-
+  
   sim$wolves <- wolves
-
+  
   # Intialize the outputs
   sim$out_terrSize <- cbind(time = numeric(0), terrSize = numeric(0))
   sim$out_newTerrSize <- numeric(0)
@@ -193,7 +193,7 @@ wolfAlpsInit <- function(sim) {
   # This start for out_statSim is wrong but needed to compare with Seles as it is the starting value in Seles
   sim$out_statSim <- cbind(time = 0, numPack = 13, numPack2A = 13, popSize = 0, popSizeJuv = 0,
                            numDied = 0, numJuvDied = 0, numDispDied = 0, numJuvTot = 0)
-
+  
   sim$out_terr <- list()
   sim$out_joinCreate <- cbind(time = start(sim, "year"):end(sim, "year"),
                               join = 0, create = 0)
@@ -202,7 +202,7 @@ wolfAlpsInit <- function(sim) {
   # the alpha type map
   sim$packAlphaType <- sim$packIDWorld
   sim$packAlphaType[] <- 0
-
+  
   return(invisible(sim))
 }
 
@@ -237,13 +237,13 @@ wolfAlpsSaveStatPack <- function(sim) { # record the pack information (number of
 }
 
 wolfAlpsSaveStatSim <- function(sim) { # record pack numbers, population sizes and number of dead wolves
-
+  
   if(time(sim, "year") > start(sim, "year")){ # the record for time = start are built when initializing sim$out_statSim
-
+    
     # Number of packs
     packInd <- unique(of(agents = sim$wolves, var = "packID"))
     countPackInd <- length(packInd[!is.na(packInd)]) # NA for dispersers
-
+    
     # Number of packs with both alpha wolves in it
     alphaInd <- NLwith(agents = sim$wolves, var = "alpha", val = 1)
     alphaFemale <- NLwith(agents = alphaInd, var = "sex", val = "F")
@@ -251,32 +251,32 @@ wolfAlpsSaveStatSim <- function(sim) { # record pack numbers, population sizes a
     alphaMale <- NLwith(agents = alphaInd, var = "sex", val = "M")
     packAlphaMale <- of(agents = alphaMale, var = "packID")
     packReproduce <- intersect(packAlphaFemale, packAlphaMale) # packID where there is both a male and female alpha
-
+    
     # Population sizes
     popSize <- NLcount(sim$wolves)
     popSizeJuv <- NLcount(NLwith(agents = sim$wolves, var = "ageClass", val = "juvenile"))
-
+    
     # map of pack Alpha situation
     onlyMale <- packAlphaMale[!(packAlphaMale %in% packReproduce)]
     onlyFemale <- packAlphaFemale[!(packAlphaFemale %in% packReproduce)]
-
+    
     sim$packAlphaType[sim$packIDWorld %in% packReproduce]  <- 3
     if(length(onlyFemale)) sim$packAlphaType[sim$packIDWorld %in% onlyFemale]  <- 2
     if(length(onlyMale)) sim$packAlphaType[sim$packIDWorld %in% onlyMale]  <- 1
-
-
+    
+    
     sim$out_statSim <- rbind(sim$out_statSim, cbind(time = time(sim, "year"), numPack = countPackInd, numPack2A = length(packReproduce),
                                                     popSize = popSize, popSizeJuv = popSizeJuv,
                                                     numDied = max(of(agents = sim$wolves, var = "who")) - popSize,
                                                     numJuvDied = sum(sim$out_numDeadJuv), numDispDied = sum(sim$out_numDeadDisp),
                                                     numJuvTot = sum(sim$out_numJuvTot)))
   }
-
+  
   return(invisible(sim))
 }
 
 wolfAlpsDistDisp <- function(sim) { # record the dispersal distances
-
+  
   endDisp <- of(agents = sim$wolves, var = c("who", "xcor", "ycor")) # wolves locations
   whoInter <- intersect(sim$startDisp[,"who"], endDisp[,"who"]) # who of disperser wolves that are still alive
   startLoc <- sim$startDisp[sim$startDisp[,"who"] %in% whoInter,, drop = FALSE] # starting locations of the alive dispersers
@@ -285,12 +285,12 @@ wolfAlpsDistDisp <- function(sim) { # record the dispersal distances
   endLoc <- endLoc[order(endLoc[,"who"]),,drop = FALSE]
   sim$out_dispersers[sim$out_dispersers[,"time"] == floor(time(sim, "year")), "disperserEnd"] <- NROW(endLoc) # how many dispersers ended
   distDisp <- NLdist(agents = startLoc[, c(2,3), drop = FALSE], agents2 = endLoc[, c(2,3), drop = FALSE]) # distance between the locations
-
+  
   if(length(distDisp) != 0){
     sim$out_distDisp <- rbind(sim$out_distDisp,
                               cbind(time = time(sim, "year"), distDisp = distDisp * params(sim)$wolfAlps$CellWidth))
   }
-
+  
   return(invisible(sim))
 }
 
@@ -305,7 +305,7 @@ wolfAlpsPlot <- function(sim) {
   wolvesSP <- turtles2spdf(sim$wolves)
   sim$packID <- world2raster(sim$packIDWorld)
   #numPacks <- data.table(sim$out_statPack)[,list(NumPacks=length(packSize)),by=time]
-
+  
   initialTime <- time(sim, "year") == start(sim, "year")
   curTime <- NROW(sim$out_statSim)
   if(initialTime) {
@@ -315,73 +315,73 @@ wolfAlpsPlot <- function(sim) {
   } else {
     arr <- NULL
   }
-
+  
   yr <- sim$out_statSim[,"time"]
   Plot(x = yr[curTime], y = sim$out_statSim[,"numPack"][curTime], xlab = "Year", axes = "L", ylim = c(0,100),
        ylab = "# (green = both alphas, blue = all)", xlim = c(start(sim), end(sim)), addTo = "numPacks", cex = 0.5,
        arr = arr, col = "blue", title = "Number of Packs")
   Plot(x = yr[curTime], y = sim$out_statSim[,"numPack2A"][curTime], addTo = "numPacks", cex = 0.5,
        col = "green")
-
+  
   Plot(x = yr[curTime], y = sim$out_statSim[,"popSize"][curTime], xlab = "Year", axes = "L", ylim = c(0,250),
        ylab = "# (green = juveniles, blue = all)", xlim = c(start(sim), end(sim)), addTo = "numIndivs", cex = 0.5,
        col = "blue", title = "Population size")
   Plot(x = yr[curTime], y = sim$out_statSim[,"popSizeJuv"][curTime], addTo = "numIndivs", cex = 0.5,
        col = "green")
-
+  
   Plot(sim$packID, zero.color = "transparent", title = "Pack ID", new=!initialTime)
   Plot(sim$suitabilityRaster, cols = grey(0:100/100), title = "Habitat suitability with \npack ID & wolves")
   Plot(wolvesSP, addTo = "sim$suitabilityRaster", cols = "red", size = 3)
   Plot(sim$packID, addTo = "sim$suitabilityRaster", zero.color = "transparent")
-
+  
   sim$packAlphaTypeRas <- raster::as.factor(world2raster(sim$packAlphaType))
   suppressWarnings(levels(sim$packAlphaTypeRas) <- data.frame(ID=c(0:3), alpha = c("Neither","Male", "Female", "Both")))
   #if(!initialTime)
   Plot(sim$packAlphaTypeRas, zero.color = "transparent", title = "Alphas present",
        legendRange = c(0,3))
-
+  
   return(invisible(sim))
 }
 
 
 ### Events (reproduction)
 wolfAlpsReproduce <- function(sim) {
-
+  
   if(time(sim, "year") >= {start(sim) + 1}){
-
+    
     # Identify the wolves that will reproduce (i.e., alpha pair in a pack)
     alphaInd <- NLwith(agents = sim$wolves, var = "alpha", val = 1)
     alphaFemale <- NLwith(agents = alphaInd, var = "sex", val = "F")
     packAlphaFemale <- of(agents = alphaFemale, var = "packID")
     alphaMale <- NLwith(agents = alphaInd, var = "sex", val = "M")
     packAlphaMale <- of(agents = alphaMale, var = "packID")
-
+    
     if(params(sim)$wolfAlps$run.tests) {
       # There shouldn't be more than 1 alpha female and 1 alpha male in all packs
       expect_true(all(table(packAlphaFemale) <= 1))
       expect_true(all(table(packAlphaMale) <= 1))
     }
-
+    
     packReproduce <- intersect(packAlphaFemale, packAlphaMale) # packID where there is both a male and female alpha
     femaleReproduce <- NLwith(agents = alphaFemale, var = "packID", val = packReproduce)
     if(NLcount(femaleReproduce) != 0){
-
+      
       if(params(sim)$wolfAlps$run.tests) {
         numWolves <- NLcount(sim$wolves) # original number of wolves in the population before they reproduce
       }
-
+      
       whoFemaleReproduce <- of(agents = femaleReproduce, var = "who")
       # Different number of pups per female
       nPups <- round(rnorm(n = length(whoFemaleReproduce), mean = params(sim)$wolfAlps$MeanNpups, sd = params(sim)$wolfAlps$SdNpups))
       nPups[nPups < 1] <- 1 # parameters estimated from the distribution conditional on having pups
-
+      
       # Output
       sim$out_numJuvTot <- c(sim$out_numJuvTot, sum(nPups)) # append the number of pups born this year
-
+      
       # Create pups in the wolves object
       sim$wolves <- hatch(turtles = sim$wolves, who = whoFemaleReproduce, n = nPups, breed = "newborn") # breed = "newborn" to recognize the pups in the wolves object
       newborn <- NLwith(agents = sim$wolves, var = "breed", val = "newborn")
-
+      
       # The newborns inherit all the parent (femaleReproduce) parameters except for the who numbers. Some of the inherited variables must be changed
       newbornData <- cbind.data.frame(heading = runif(n = NLcount(newborn), min = 0, max = 360),
                                       prevX = NA,
@@ -394,99 +394,99 @@ wolfAlpsReproduce <- function(sim) {
                                       dispersing = 0,
                                       age = 0)
       sim$wolves <- NLset(turtles = sim$wolves, agents = newborn, var = colnames(newbornData), val = newbornData) # update the data for the pups
-
+      
       if(params(sim)$wolfAlps$run.tests){
         expect_equivalent(NLcount(sim$wolves), numWolves + sum(nPups))
       }
-
+      
     } # end of NLcount(femaleReproduce) != 0
   }
-
+  
   return(invisible(sim))
 }
 
 ### Events (age, mortality, create dispersing wolves and turn subordinates adults into alpha)
 wolfAlpsDemography <- function(sim) {
-
+  
   whoWolves <- of(agents = sim$wolves, var = "who")
   sim$startDisp <- cbind(who = numeric(0), xcor = numeric(), ycor = numeric(0)) # reset sim$startDisp
-
+  
   if(length(whoWolves) != 1){
     # Shuffle the sequence of the wolves for randomness
     whoWolves <- sample(whoWolves, size = length(whoWolves))
   }
-
+  
   for(indWolf in whoWolves){ # demography happens one wolf at the time
-
+    
     # Aging
     ageWolf <- of(agents = turtle(sim$wolves, who = indWolf), var = "age")
     deadWolf <- FALSE
-
+    
     if(params(sim)$wolfAlps$run.tests){
       expect_true(ageWolf <= 14) # no wolf should be older than 14
     }
-
+    
     sim$wolves <- NLset(turtles = sim$wolves, agents = turtle(sim$wolves, who = indWolf), var = "age", val = ageWolf + 1) # get 1 year older
     # ageClass update if needed
     if(ageWolf + 1 >= 3){
       sim$wolves <- NLset(turtles = sim$wolves, agents = turtle(sim$wolves, who = indWolf), var = "ageClass", val = "adult") # adult at 3 years old
     }
-
+    
     # Mortality
     if(time(sim, "year") >= {start(sim) + 2}){ # no initial mortality at first
-
+      
       # Four categories for mortality: wolves of age 1, alpha wolves, wolves less than 15 and wolves 15 or more
       if(ageWolf + 1 >= 15){ # all wolves too old (15) die
-
+        
         # Output
         sim$out_deaths <- rbind(sim$out_deaths, cbind(time = time(sim, "year"), age = ageWolf + 1))
-
+        
         sim$wolves <- die(turtles = sim$wolves, who = of(agents = turtle(sim$wolves, who = indWolf), var = "who"))
         deadWolf <- TRUE
-
+        
       } else if(of(agents = turtle(sim$wolves, who = indWolf), var = "alpha") == 1){ # mortality of alpha wolves
         if(time(sim, "year") >= {start(sim) + 4}){ # time constraint for mortality of alpha
           dieWolvesAlpha <- runif(n = 1, min = 0, max = 1) <= params(sim)$wolfAlps$AdultMortalityRate
-
+          
           if(dieWolvesAlpha){
-
+            
             # Output
             sim$out_deaths <- rbind(sim$out_deaths, cbind(time = time(sim, "year"), age = ageWolf + 1))
-
+            
             sim$wolves <- die(turtles = sim$wolves, who = of(agents = turtle(sim$wolves, who = indWolf), var = "who"))
             deadWolf <- TRUE
           }
         }
-
+        
       } else if(ageWolf + 1 == 1){ # mortality of 1 year old wolves
         dieWolves1 <- runif(n = 1, min = 0, max = 1) <= params(sim)$wolfAlps$JuvMortalityRate
-
+        
         if(dieWolves1){
-
+          
           # Output
           sim$out_deaths <- rbind(sim$out_deaths, cbind(time = time(sim, "year"), age = ageWolf + 1))
           sim$out_numDeadJuv <- c(sim$out_numDeadJuv, 1)
-
+          
           sim$wolves <- die(turtles = sim$wolves, who = of(agents = turtle(sim$wolves, who = indWolf), var = "who"))
           deadWolf <- TRUE
         }
-
+        
       } else { # mortality of the other wolves
         dieWolvesOther <- runif(n = 1, min = 0, max = 1) <= params(sim)$wolfAlps$AdultMortalityRate
-
+        
         if(dieWolvesOther){
-
+          
           # Output
           sim$out_deaths <- rbind(sim$out_deaths, cbind(time = time(sim, "year"), age = ageWolf + 1))
           if(of(agents = turtle(sim$wolves, who = indWolf), var = "ageClass") == "juvenile"){
             sim$out_numDeadJuv <- c(sim$out_numDeadJuv, 1)
           }
-
+          
           sim$wolves <- die(turtles = sim$wolves, who = of(agents = turtle(sim$wolves, who = indWolf), var = "who"))
           deadWolf <- TRUE
         }
       }
-
+      
       # Update the packIDWorld map if th pack disapeared because this wolf was the only one left in it
       packsInd <- unique(of(agents = sim$wolves, var = "packID"))
       packsInd <- packsInd[!is.na(packsInd)] # remaining packID among the wolves (packID = NA for dispersers)
@@ -497,7 +497,7 @@ wolfAlpsDemography <- function(sim) {
         pemptyPack <- NLwith(world = sim$packIDWorld, agents = patches(sim$packIDWorld), val = emptyPack) # territory (patches) where packs disapeared
         sim$packIDWorld <- NLset(world = sim$packIDWorld, agents = pemptyPack, val = 0)
       }
-
+      
       if(params(sim)$wolfAlps$run.tests){
         packsInd <- unique(of(agents = sim$wolves, var = "packID"))
         packsInd <- packsInd[!is.na(packsInd)] # packID among the wolves (packID = NA for dispersers)
@@ -509,40 +509,40 @@ wolfAlpsDemography <- function(sim) {
         expect_equivalent(length(packsInd), length(packIndMap))
         expect_equivalent(length(packsMap), length(packIndMap))
       }
-
+      
     } # end of mortality
-
+    
     if(deadWolf == FALSE){ # if the wolf did not die
-
+      
       # Identify if the wolf can be a potential disperser (i.e., juvenile of age 1 or 2 which is not already dispersing)
       wolfData <- inspect(turtles = sim$wolves, who = indWolf)
       potentialDisp <- wolfData[wolfData[,"ageClass"] == "juvenile" & wolfData[,"age"] %in% c(1,2) & wolfData[,"dispersing"] == 0 , , drop = FALSE]
-
+      
       if(NROW(potentialDisp) > 0) { # if the wolf is a potential disperser
-
+        
         packSizeMax <- rnorm(n = 1, mean = params(sim)$wolfAlps$MeanPackSize, sd = params(sim)$wolfAlps$SdPackSize) # generate the maximum number of wolves allowed in the pack
         packID <- of(agents = sim$wolves, var = "packID")
         actualPackSize <- table(packID)
         myPackSize <- actualPackSize[as.numeric(names(actualPackSize)) == potentialDisp[,"packID"]] # number of wolves in the pack of the potential disperser
-
+        
         if(myPackSize > packSizeMax){ # if the number of wolves in the pack is larger than what is allowed, the wolf become disperser
           sim$wolves <- NLset(turtles = sim$wolves, agents = turtle(sim$wolves, who = indWolf), var = c("dispersing", "packID"),
                               val = cbind(dispersing = 1, packID = NA))
-
+          
           # Update the packIDWorld map if this wolf which disperse was the only one left in the pack
           packWhichDisapeared <- myPackSize == 1
           if(packWhichDisapeared){
             pPackDisapeared <- NLwith(world = sim$packIDWorld, agents = patches(sim$packIDWorld), val = as.numeric(names(which(packWhichDisapeared)))) # territory (patches) where the pack was
             sim$packIDWorld <- NLset(world = sim$packIDWorld, agents = pPackDisapeared, val = 0)
           }
-
+          
           # Record the disperser location to calculate its dispersal distance when it either joins a pack or creates a new territory
           sim$startDisp <- rbind(sim$startDisp, of(agents = turtle(sim$wolves, who = indWolf), var = c("who", "xcor", "ycor")))
           sim$out_dispersers[sim$out_dispersers[,"time"] == floor(time(sim, "year")), "disperserStart"] <- sim$out_dispersers[sim$out_dispersers[,"time"] == floor(time(sim, "year")), "disperserStart"] + 1 # how many dispersers started
-
+          
         }
       }
-
+      
       if(params(sim)$wolfAlps$run.tests){
         packsInd <- unique(of(agents = sim$wolves, var = "packID"))
         packsInd <- packsInd[!is.na(packsInd)] # packID among the wolves (packID = NA for dispersers)
@@ -553,37 +553,37 @@ wolfAlpsDemography <- function(sim) {
         expect_equivalent(length(packsInd), length(packIndMap))
         expect_equivalent(length(packsMap), length(packIndMap))
       }
-
+      
       # If the wolf is a subordinate adult and not already an alpha, it can replace a missing alpha in its pack
       if((of(agents = turtle(sim$wolves, who = indWolf), var = "ageClass") == "adult") & (of(agents = turtle(sim$wolves, who = indWolf), var = "alpha") == 0)){
-
+        
         myPackID <- of(agents = turtle(sim$wolves, who = indWolf), var = "packID")
         otherWolves <- NLwith(agents = sim$wolves, var = "packID", val = myPackID) # other wolves in its pack
         otherAlpha <- NLwith(agents = otherWolves, var = "alpha", val = 1) # other alpha wolves in its pack
-
+        
         if(NLcount(otherAlpha) == 1){ #if there's only one alpha in the pack
           if(of(agents = otherAlpha, var = "sex") != of(agents = turtle(sim$wolves, who = indWolf), var = "sex")){ # and it is of the opposite sex
             sim$wolves <- NLset(turtles = sim$wolves, agents = turtle(sim$wolves, who = indWolf), var = "alpha", val = 1) # become an alpha
           }
         }
       }
-
+      
     } # end of if the wolf did not die
   } # end of the loop for all the individuals
-
+  
   return(invisible(sim))
 }
 
 ### Events (dispersal movement)
 wolfAlpsDispersal <- function(sim) {
-
+  
   dispersers <- NLwith(agents = sim$wolves, var = "dispersing", val = 1) # dispersing wolves
   whoDispersers <- of(agents = dispersers, var = "who")
   nonDispersers <- other(agents = sim$wolves, except = dispersers)
-
+  
   # Dispersal movement
   if(NLcount(dispersers) != 0){ # if there are still dispersers not dead
-
+    
     coords <- coordinates(dispersers)
     if(is.null(dim(coords))) dim(coords) <- c(1,2)
     noNextLocs <- rep(TRUE, NROW(coords))
@@ -591,7 +591,7 @@ wolfAlpsDispersal <- function(sim) {
     # Remove as available locations, the patches where there are already individuals
     coor <- coordinates(sim$wolves)
     wolfInds <- cellFromPxcorPycor(sim$suitabilityWorld, coor[,"xcor"], coor[,"ycor"]) # cell number (= indices)
-
+    
     while(any(noNextLocs)) { # as long as there are wolves with no available next locations, increase for them the step length for the dispersal movement
       # Grow rings between 1 and 1.5 step length centered on the dispersers locations
       colnames(coords) <- c("x", "y")
@@ -603,15 +603,15 @@ wolfAlpsDispersal <- function(sim) {
       # And add the patches coordinates to the data.table
       data.table::set(nextLocs, , j = "x", xy[,"x"]) # faster than nextLocs[,x:=xy["x"]]
       data.table::set(nextLocs, , j = "y", xy[,"y"]) # faster than nextLocs[,y:=xy["y"]]
-
+      
       # Remove as available next locations, the ones where there are already wolves on it
       data.table::set(nextLocs, , j = "empty", 1) # empty = 1, it is empty
       nextLocs[nextLocs$indices %in% wolfInds, empty:=0] # empty = 0, there is a wolf on this cell
-
+      
       noNextLocs <- nextLocs[,sum(empty == 1) == 0, by = id]$V1 # are all the patches occupied in the rings?
       stepRep[noNextLocs] <- stepRep + stepRep # double the step length for the next trial
     }
-
+    
     # Now each wolf has its subset of cells as potential next locations for dispersal
     # Probability of going to the potential next locations regarding their directions
     headDispersers <- of(agents = dispersers, var = "heading")
@@ -622,10 +622,10 @@ wolfAlpsDispersal <- function(sim) {
                                          agents2 = cbind(x = x, y = y))
             )
       )}, by = id] # data.table use of by = id, so each of the above happens within each id
-
+    
     # Probability of going to the potential next locations regarding habitat suitability
     data.table::set(nextLocs,,"suitabilityValGood", sim$suitabilityValGood[nextLocs$indices])
-
+    
     # Probability of going to the potential next locations regarding the directions, habitat suitability and other wolves presence
     data.table::set(nextLocs,,"prob", nextLocs$nextAngle * nextLocs$suitabilityValGood * nextLocs$empty)
     probLoc <- runif(n = NLcount(dispersers), min = 0, max = 1)
@@ -634,7 +634,7 @@ wolfAlpsDispersal <- function(sim) {
     nextLocs <- nextLocs[,.SD[findInterval(probLoc[id], cumsum(prob/sum(prob))) + 1],
                          by = id, .SDcols = c("x", "y", "prob")]
     selectedLocID <- as.matrix(nextLocs)[,c(2,3,1), drop = FALSE]
-
+    
     # If some wolves don't have a next location because all their available cell to move had their probability = 0
     if(any(is.na(nextLocs))){
       whNA <- which(is.na(nextLocs$x))
@@ -644,56 +644,56 @@ wolfAlpsDispersal <- function(sim) {
                              cbind(x = newLoc[,1], y = newLoc[,2], id = nextLocs$id[whNA]))
       selectedLocID <- selectedLocID[!is.na(selectedLocID[,1]),]
     }
-
+    
     # Move the wolves to the selected locations
     selectedLoc <- selectedLocID[order(selectedLocID[,"id"]), c(1,2), drop = FALSE] # order the destination by the dispersers
-
+    
     if(params(sim)$wolfAlps$run.tests) {
       expect_true(length(selectedLoc[is.na(selectedLoc[,1]),1]) == 0) # there shouldn't be NA in the next locations
       expect_true(NROW(selectedLoc) == NLcount(dispersers)) # each wolf must have a destination
       dispersersBeforeMove <- dispersers
     }
-
+    
     dispersers <- face(turtles = dispersers, agents2 = selectedLoc) # headings
     dispersers <- moveTo(turtles = dispersers, agents = selectedLoc) # locations
     # Update the dispersers inside the wolves object
     sim$wolves <- rbind(dispersers, nonDispersers)
-
+    
     if(params(sim)$wolfAlps$run.tests){
       dispersersUpdated <- NLwith(agents = sim$wolves, var = "dispersing", val = 1)
       distMoved <- NLdist(agents = dispersersBeforeMove, agents2 = dispersersUpdated)
       expect_true(all(distMoved > params(sim)$wolfAlps$MoveStep )) # all dispersers should have at least move of a MoveStep distance
     }
-
+    
   } # end of NLcount(dispersers) != 0
-
+  
   return(invisible(sim))
 }
 
 ### Events (join a pack or build a new territory)
 wolfAlpsEstablish <- function(sim) {
-
+  
   dispersers <- sim$wolves[sim$wolves$dispersing == 1,]
   numDispersers <- NLcount(dispersers) # number of dispersers
   nonDispersers <- other(agents = sim$wolves, except = dispersers)
   oldPacks <- unique(of(agents = sim$wolves, var = "packID"))
   sim$out_newTerrSize <- 0
   pWolves <- patchHere(world = sim$suitabilityWorld, turtles = sim$wolves) # where are located the wolves
-
+  
   if(numDispersers != 0){ # if there are still dispersers alive
-
+    
     if(numDispersers == 1){
       seqDispersers <- 1
     } else {
       # Shuffle the sequence of the dispersers for randomness as they join pack or create territories one wolf at the time
       seqDispersers <- sample(1:numDispersers, size = numDispersers)
     }
-
+    
     for(xDisp in seqDispersers){ # one wolf at the time
-
+      
       disperserLoc <- patchHere(world = sim$suitabilityWorld, turtles = dispersers[xDisp,]) # disperser wolf location
       otherPWolves <- other(agents = pWolves, except = disperserLoc) # patches where are located all the wolves, except the dispersing wolf
-
+      
       # Define the packs the dispersers can potentially joined (i.e, 1 alpha of the opposite sex)
       sexDisp <- of(agents = dispersers[xDisp,], var = "sex")
       existingPack <- of(agents = sim$wolves, var = c("who", "packID", "alpha", "sex")) # existing packs in the wolves
@@ -702,14 +702,14 @@ wolfAlpsEstablish <- function(sim) {
       pack1alphaSex <- pack1alpha[pack1alpha$alpha == 1,] # keep only data about the alpha individuals
       packCanJoin <- pack1alphaSex[pack1alphaSex$sex != sexDisp, "packID"] # pack the disperser can join: 1 alpha of the opposite sex
       packCannotJoin <- unique(existingPack$packID)[!unique(existingPack$packID) %in% packCanJoin]
-
+      
       # In the suitabilityVal vector (suitability values for the landscape), put 0 in the places where disperser cannot go (i.e., where there are packs they cannot join and where there is already a wolf on it)
       suitabilityValUpdated <- sim$suitabilityVal # needs to keep a clean copy of suitabilityVal to update each time
       suitabilityValUpdated[cellFromPxcorPycor(world = sim$suitabilityWorld, pxcor = otherPWolves[,1], pycor = otherPWolves[,2])] <- 0 # remove where there already are wolves
       suitabilityValUpdated[sim$packIDWorld[] %in% packCannotJoin] <- 0 # remove cells in territories that the disperser cannot join
       suitabilityValUpdated[suitabilityValUpdated != 0] <- 1 # all the other cells can have a territory on it
       suitabilityValUpdatedRaster <- setValues(sim$suitabilityRaster, suitabilityValUpdated)
-
+      
       # The dispersing wolf cannot join a pack, it will spread a contiguous territory avoiding all established territories
       stopRuleSuitability <- function(landscape){sum(landscape) > params(sim)$wolfAlps$MinPackQuality} # rule to stop territories from expanding when they reached max suitability
       possTerr <- spread(landscape = sim$suitabilityRaster,
@@ -718,19 +718,19 @@ wolfAlpsEstablish <- function(sim) {
                          returnIndices = TRUE, circle = TRUE, stopRuleBehavior = "includePixel",
                          stopRule = stopRuleSuitability)
       possTerr <- possTerr[possTerr$active == FALSE]
-
+      
       if(params(sim)$wolfAlps$run.tests){
         expect_true(nrow(possTerr) <= params(sim)$wolfAlps$PackArea)
       }
-
+      
       # Add the distance to each from the disperser location
       possTerr[,dist := NLdist(agents = disperserLoc,
                                agents2 = PxcorPycorFromCell(world = sim$suitabilityWorld, cellNum = possTerr$indices))]
       # Remove cells too far
       possTerr <- possTerr[possTerr$dist < 14/{params(sim)$wolfAlps$CellWidth^2}] #{} faster than ()
-
+      
       if(NROW(possTerr) > 1) { # more than the current location
-
+        
         # Add other packID on the cells
         possTerr[,packPresence := of(agents = PxcorPycorFromCell(world = sim$suitabilityWorld, cellNum = possTerr$indices),
                                      world = sim$packIDWorld)]
@@ -738,17 +738,17 @@ wolfAlpsEstablish <- function(sim) {
         if(possTerr[initialLocus == indices,packPresence] %in% packCannotJoin){
           possTerr <- possTerr[initialLocus != indices]
         }
-
+        
         # If one of the cell has a packID != 0, it is a pack the disperser can join
         packJoining <- possTerr[possTerr$packPresence != 0,]
-
+        
         if(nrow(packJoining) > 0){ # the disperser is joining a pack
-
+          
           packJoiningID <- packJoining[packJoining$dist == min(packJoining$dist), packPresence] # closest pack to join
           if(length(packJoiningID) > 1){ # if there are more than one pack the disperser can join at the same minimum distance
             packJoiningID <- sample(packJoiningID, size = 1) # select one randomly
           }
-
+          
           # Update the disperser data
           alphaToJoin <- existingPack[existingPack$packID == packJoiningID & existingPack$alpha == 1, "who"] # alpha belonging to the pack the disperser is joining
           wolfDisperser <- moveTo(turtles = dispersers[xDisp,], agents = turtle(sim$wolves, who = alphaToJoin)) # move to the alpha wolf location
@@ -757,14 +757,14 @@ wolfAlpsEstablish <- function(sim) {
           sim$wolves <- NLset(turtles = sim$wolves, agents = wolfDisperser, var = c("alpha", "ageClass", "dispersing", "packID", "oldPackID"),
                               val = cbind.data.frame(alpha = 1, ageClass = "adult", dispersing = 0, packID = packJoiningID, oldPackID = packJoiningID))
           sim$out_joinCreate[sim$out_joinCreate[,"time"] == floor(time(sim, "year")), "join"] <- sim$out_joinCreate[sim$out_joinCreate[,"time"] == floor(time(sim, "year")), "join"] + 1 # one more wolf joined a pack
-
+          
         } else { # the disperser create a territory
           if(time(sim, "year") - floor(time(sim, "year")) >=
              runif(n = 1, min = params(sim)$wolfAlps$PhaseTransitionLower, max = 1)){ # behavioral transition parameter (min time required before creating a new territory)
-
+            
             # Decide if the disperser can establish its territory based on its suitability
             if(sum(sim$suitabilityValOri[possTerr$indices]) > params(sim)$wolfAlps$MinPackQuality){ # if the total suitability is good enough then create a new territory
-
+              
               # Cells composing the territory
               cellTerr <- sim$packIDWorld@pCoords[possTerr$indices, , drop = FALSE]
               # When a disperser create a pack, it becomes alpha, adult, non disperser and obtain a new packID not already used in the population
@@ -777,13 +777,13 @@ wolfAlpsEstablish <- function(sim) {
         }
       } # end of if(NROW(possTerr) > 0)
     } # end of the loop for all the dispersers
-
+    
     # Size of the new created packs (not the joined packs)
     newPackCreated <- sim$packIDWorld[!(sim$packIDWorld %in% c(oldPacks,0))]
     if(length(newPackCreated) != 0){
       sim$out_newTerrSize <- tapply(newPackCreated, newPackCreated, length)
     }
-
+    
     if(params(sim)$wolfAlps$run.tests){
       # There shouldn't be more than 2 alpha (1 female and 1 male) per pack
       alphaWolves <- NLwith(agents = sim$wolves, var = "alpha", val = 1)
@@ -791,7 +791,7 @@ wolfAlpsEstablish <- function(sim) {
       expect_true(all(tapply(wolvesData[,"sex"], wolvesData[,"packID"], length) <= 2))
       expect_true(all(tapply(wolvesData[,"sex"], wolvesData[,"packID"], function(x){length(which(x == "F"))}) <= 1))
       expect_true(all(tapply(wolvesData[,"sex"], wolvesData[,"packID"], function(x){length(which(x == "M"))}) <= 1))
-
+      
       expect_true(all(sim$out_newTerrSize <= params(sim)$wolfAlps$PackArea)) # new territories should respect the maximum area condition
       packIDWorldVal <- sim$packIDWorld[]
       cellNumNewPack <- which(packIDWorldVal %in% unique(newPackCreated))
@@ -804,13 +804,13 @@ wolfAlpsEstablish <- function(sim) {
       newPackTotalSuitability <- tapply(newPackSuitability, newPackCreated, sum)
       expect_true(all(newPackTotalSuitability > params(sim)$wolfAlps$MinPackQuality)) # total suitability in the territory condition
     }
-
+    
     # Dispersal mortality for the remaining dispersers who haven't found a pack to join or a territory to create
     stillDispersing <- NLwith(agents = sim$wolves, var = "dispersing", val = 1) # wolves have been updated
     allNonDispersers <- other(agents = sim$wolves, except = stillDispersing)
     whoStillDispersing <- of(agents = stillDispersing, var = "who")
     numStillDispersing <- NLcount(stillDispersing)
-
+    
     if(time(sim, "year") - floor(time(sim, "year")) < params(sim)$wolfAlps$EndDispersal){ # if wolves can still disperse
       inTerr <- patchHere(world = sim$packIDWorld, turtles = stillDispersing) # in which territories are the remaining dispersers
       packID <- of(world = sim$packIDWorld, agents = inTerr)
@@ -819,21 +819,21 @@ wolfAlpsEstablish <- function(sim) {
     } else {
       dieDispersers <- rep(TRUE, length(whoStillDispersing)) # if it's too late, all remaining dispersers die
     }
-
+    
     if(length(whoStillDispersing[dieDispersers]) != 0 ){
-
+      
       sim$out_deaths <- rbind(sim$out_deaths, cbind(time = time(sim, "year"), age = of(agents = turtle(sim$wolves, who = whoStillDispersing[dieDispersers]), var = "age")))
-
+      
       stillDispersing <- die(turtles = stillDispersing, who = whoStillDispersing[dieDispersers])
       sim$wolves <- rbind(stillDispersing, allNonDispersers) # update the wolves object to remove the dead dispersers (used later to decide the empty patches)
-
+      
       if(params(sim)$wolfAlps$run.tests){
         expect_equivalent(NLcount(stillDispersing), numStillDispersing - sum(dieDispersers))
       }
     }
     sim$out_numDeadDisp <- c(sim$out_numDeadDisp, numStillDispersing - NLcount(stillDispersing))
-
+    
   } # end of if(NLcount(dispersers) =! 0)
-
+  
   return(invisible(sim))
 }
