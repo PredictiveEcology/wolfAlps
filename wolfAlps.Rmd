@@ -20,10 +20,13 @@ For this and all subsequent code, you will need to be in R.
 
 ```{r install necessary R packages, eval = FALSE, echo = TRUE}
 if (!require("Require")) {install.packages("Require"); require("Require")}
-Require(c("SpaDES", "NetLogoR"), upgrade = FALSE)
+Require(c("PredictiveEcology/SpaDES.core@development", "NetLogoR"), upgrade = FALSE)
+workingDirectory <- ".."
 ```
 
 # Download model
+
+This section will get the model onto your computer. If you have already downloaded this model manually, then skip this.
 
 ```{r download module, eval = FALSE, echo = TRUE}
 moduleName <- "wolfAlps"

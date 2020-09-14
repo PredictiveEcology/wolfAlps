@@ -38,13 +38,13 @@ defineModule(sim, list(
     defineParameter("PackArea", "numeric", 256, NA, NA, "Maximum number of cells for a territory to be established"),
     defineParameter("run.tests", "logical", FALSE, NA, NA, "Should tests be run")
   ),
-  inputObjects = bind_rows(
+  inputObjects = bindrows(
     expectsInput(objectName = "wolves2008", objectClass = "raster", desc = NA, sourceURL = NA),
     expectsInput(objectName = "packs2008", objectClass = "raster", desc = NA, sourceURL = NA),
     expectsInput(objectName = "CMR", objectClass = "raster", desc = NA, sourceURL = NA),
     expectsInput(objectName = "HabitatSuitability", objectClass = "raster", desc = NA, sourceURL = NA)
   ),
-  outputObjects = bind_rows(
+  outputObjects = bindrows(
     # createsOutput(objectName = NA, objectClass = NA, desc = NA)
   )
 ))
