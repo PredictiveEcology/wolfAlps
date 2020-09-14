@@ -5,6 +5,8 @@ date: "17 juin 2016"
 output: html_document
 csl: ecology.csl
 bibliography: McIntire.bib
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Overview
@@ -17,17 +19,13 @@ This is an R port of the original SELES model that was used in [@marucco_2010].
 For this and all subsequent code, you will need to be in R.
 
 ```{r install necessary R packages, eval = FALSE, echo = TRUE}
-install.packages("devtools")
-library(devtools)
-install_github("PredictiveEcology/SpaDES@development")
-install_github("PredictiveEcology/NetLogoR")
+if (!require("Require")) {install.packages("Require"); require("Require")}
+Require(c("SpaDES", "NetLogoR"), upgrade = FALSE)
 ```
 
 # Download model
 
 ```{r download module, eval = FALSE, echo = TRUE}
-library(SpaDES)
-
 moduleName <- "wolfAlps"
 
 # Change this to a place you would like to put the model, if desired
