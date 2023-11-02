@@ -730,7 +730,7 @@ Establish <- function(sim) {
       possTerr <- spread(landscape = sim$suitabilityRaster,
                          loci = cellFromPxcorPycor(world = sim$suitabilityWorld, pxcor = disperserLoc[,1], pycor = disperserLoc[,2]),
                          spreadProb = suitabilityValUpdatedRaster, maxSize = P(sim)$PackArea,
-                         returnIndices = TRUE, circle = TRUE, stopRuleBehavior = "includePixel",
+                         returnIndices = TRUE, circle = TRUE, stopRuleBehavior = "includeRing",
                          stopRule = stopRuleSuitability, # function defined bottom of this script
                          minPackQuality = P(sim)$MinPackQuality)
       
