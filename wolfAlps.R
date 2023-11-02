@@ -8,12 +8,12 @@ defineModule(sim, list(
               person("Eliot", "McIntire", email="eliot.mcintire@canada.ca", role=c("aut", "cre"))),
   childModules = character(),
   version = numeric_version("2.0.0"),
-  spatialExtent = raster::extent(rep(NA_real_, 4)), # raster::extent(raster(paste(inputDir, "/HabitatSuitability.asc", sep = ""))),
+  # spatialExtent = raster::extent(rep(NA_real_, 4)), # raster::extent(raster(paste(inputDir, "/HabitatSuitability.asc", sep = ""))),
   timeframe = as.POSIXlt(c(NA, NA)), # as.POSIXlt(c(0, 14)),
   timeunit = "year", # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "wolfAlps.Rmd"),
-  reqdPkgs = list("NetLogoR", "SpaDES", "raster", "plyr", "data.table", "fpCompare", "testthat"),
+  reqdPkgs = list("NetLogoR", "SpaDES", "terra", "plyr", "data.table", "fpCompare", "testthat", "RColorBrewer"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -39,10 +39,10 @@ defineModule(sim, list(
     defineParameter("run.tests", "logical", FALSE, NA, NA, "Should tests be run")
   ),
   inputObjects = bindrows(
-    expectsInput(objectName = "wolves2008", objectClass = "raster", desc = NA, sourceURL = NA),
-    expectsInput(objectName = "packs2008", objectClass = "raster", desc = NA, sourceURL = NA),
-    expectsInput(objectName = "CMR", objectClass = "raster", desc = NA, sourceURL = NA),
-    expectsInput(objectName = "HabitatSuitability", objectClass = "raster", desc = NA, sourceURL = NA)
+    expectsInput(objectName = "wolves2008", objectClass = "SpatRaster", desc = NA, sourceURL = NA),
+    expectsInput(objectName = "packs2008", objectClass = "SpatRaster", desc = NA, sourceURL = NA),
+    expectsInput(objectName = "CMR", objectClass = "SpatRaster", desc = NA, sourceURL = NA),
+    expectsInput(objectName = "HabitatSuitability", objectClass = "SpatRaster", desc = NA, sourceURL = NA)
   ),
   outputObjects = bindrows(
     # createsOutput(objectName = NA, objectClass = NA, desc = NA)
@@ -144,9 +144,9 @@ Init <- function(sim) {
   packIDVal[packIDVal == -1] <- 0
   sim$packIDWorld <- createWorld(1, 436, 1, 296, data = packIDVal) # initial pack locations
   CMRWorld <- createWorld(1, 436, 1, 296, data = values(CMR)) # CMR data
-  
+
   # Extract the wolves locations, packID and CMR data
-  wolfLoc <- NLwith(world = initialWolvesWorld, agents = patches(initialWolvesWorld), val = 1:61) # 1:61 = wolfID
+  wolfLoc <- NLwith(world = initialWolvesWorld, agents = NetLogoR::patches(initialWolvesWorld), val = 1:61) # 1:61 = wolfID
   wolfID <- of(world = initialWolvesWorld, agents = wolfLoc) # ID in the order of the wolfLoc
   packID <- of(world = sim$packIDWorld, agents = wolfLoc) # packID value for each wolfID
   wolfCMR <- of(world = CMRWorld, agents = wolfLoc) # CMR value for each wolfID
@@ -284,9 +284,9 @@ DistDisp <- function(sim) { # record the dispersal distances
   endLoc <- endDisp[endDisp[,"who"] %in% whoInter,, drop = FALSE] # ending locations of the alive dispersers
   endLoc <- endLoc[order(endLoc[,"who"]),,drop = FALSE]
   sim$out_dispersers[sim$out_dispersers[,"time"] == floor(time(sim, "year")), "disperserEnd"] <- NROW(endLoc) # how many dispersers ended
-  distDisp <- NLdist(agents = startLoc[, c(2,3), drop = FALSE], agents2 = endLoc[, c(2,3), drop = FALSE]) # distance between the locations
-  
-  if(length(distDisp) != 0){
+  if(NROW(endLoc) != 0){
+    distDisp <- NLdist(agents = startLoc[, c(2,3), drop = FALSE], agents2 = endLoc[, c(2,3), drop = FALSE]) # distance between the locations
+
     sim$out_distDisp <- rbind(sim$out_distDisp,
                               cbind(time = time(sim, "year"), distDisp = distDisp * P(sim)$CellWidth))
   }
@@ -504,10 +504,10 @@ Demography <- function(sim) {
       packsMap <- packsMap[packsMap != 0] # packID on the map (packID = 0 = no pack)
       emptyPack <- packsMap[which(!packsMap %in% packsInd)] # packID with no wolves left in it
       if(length(emptyPack) != 0){
-        pemptyPack <- NLwith(world = sim$packIDWorld, agents = patches(sim$packIDWorld), val = emptyPack) # territory (patches) where packs disapeared
+        pemptyPack <- NLwith(world = sim$packIDWorld, agents = NetLogoR::patches(sim$packIDWorld), val = emptyPack) # territory (patches) where packs disapeared
         sim$packIDWorld <- NLset(world = sim$packIDWorld, agents = pemptyPack, val = 0)
       }
-      
+
       if(P(sim)$run.tests){
         packsInd <- unique(of(agents = sim$wolves, var = "packID"))
         packsInd <- packsInd[!is.na(packsInd)] # packID among the wolves (packID = NA for dispersers)
@@ -542,10 +542,10 @@ Demography <- function(sim) {
           # Update the packIDWorld map if this wolf which disperse was the only one left in the pack
           packWhichDisapeared <- myPackSize == 1
           if(packWhichDisapeared){
-            pPackDisapeared <- NLwith(world = sim$packIDWorld, agents = patches(sim$packIDWorld), val = as.numeric(names(which(packWhichDisapeared)))) # territory (patches) where the pack was
+            pPackDisapeared <- NLwith(world = sim$packIDWorld, agents = NetLogoR::patches(sim$packIDWorld), val = as.numeric(names(which(packWhichDisapeared)))) # territory (patches) where the pack was
             sim$packIDWorld <- NLset(world = sim$packIDWorld, agents = pPackDisapeared, val = 0)
           }
-          
+
           # Record the disperser location to calculate its dispersal distance when it either joins a pack or creates a new territory
           sim$startDisp <- rbind(sim$startDisp, of(agents = turtle(sim$wolves, who = indWolf), var = c("who", "xcor", "ycor")))
           sim$out_dispersers[sim$out_dispersers[,"time"] == floor(time(sim, "year")), "disperserStart"] <- sim$out_dispersers[sim$out_dispersers[,"time"] == floor(time(sim, "year")), "disperserStart"] + 1 # how many dispersers started
@@ -593,15 +593,15 @@ Dispersal <- function(sim) {
   
   # Dispersal movement
   if(NLcount(dispersers) != 0){ # if there are still dispersers not dead
-    
-    coords <- coordinates(dispersers)
+
+    coords <- NetLogoR::coordinates(dispersers)
     if(is.null(dim(coords))) dim(coords) <- c(1,2)
     noNextLocs <- rep(TRUE, NROW(coords))
     stepRep <- rep(P(sim)$MoveStep, NROW(coords)) # step to move for the first dispersal trial to find empty patches
     # Remove as available locations, the patches where there are already individuals
-    coor <- coordinates(sim$wolves)
+    coor <- NetLogoR::coordinates(sim$wolves)
     wolfInds <- cellFromPxcorPycor(sim$suitabilityWorld, coor[,"xcor"], coor[,"ycor"]) # cell number (= indices)
-    
+
     while(any(noNextLocs)) { # as long as there are wolves with no available next locations, increase for them the step length for the dispersal movement
       # Grow rings between 1 and 1.5 step length centered on the dispersers locations
       colnames(coords) <- c("x", "y")
