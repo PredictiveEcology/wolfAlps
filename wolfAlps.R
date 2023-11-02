@@ -13,7 +13,7 @@ defineModule(sim, list(
   timeunit = "year", # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "wolfAlps.Rmd"),
-  reqdPkgs = list("NetLogoR", "SpaDES", "terra", "plyr", "data.table", "fpCompare", "testthat", "RColorBrewer"),
+  reqdPkgs = list("NetLogoR (>= 1.0.0)", "SpaDES", "terra", "plyr", "data.table", "fpCompare", "testthat", "RColorBrewer"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA, "This describes the simulation time at which the first plot event should occur"),
