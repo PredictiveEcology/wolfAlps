@@ -726,13 +726,13 @@ Establish <- function(sim) {
       suitabilityValUpdatedRaster <- setValues(sim$suitabilityRaster, suitabilityValUpdated)
       
       # The dispersing wolf cannot join a pack, it will spread a contiguous territory avoiding all established territories
-      stopRuleSuitability <- function(landscape){sum(landscape) > P(sim)$MinPackQuality} # rule to stop territories from expanding when they reached max suitability
+      # stopRuleSuitability <- function(landscape){sum(landscape) > P(sim)$MinPackQuality} # rule to stop territories from expanding when they reached max suitability
       possTerr <- spread(landscape = sim$suitabilityRaster,
                          loci = cellFromPxcorPycor(world = sim$suitabilityWorld, pxcor = disperserLoc[,1], pycor = disperserLoc[,2]),
                          spreadProb = suitabilityValUpdatedRaster, maxSize = P(sim)$PackArea,
                          returnIndices = TRUE, circle = TRUE, stopRuleBehavior = "includePixel",
-                         stopRule = stopRuleSuitability)
-      possTerr <- possTerr[possTerr$active == FALSE]
+                         stopRule = stopRuleSuitability, # function defined bottom of this script
+                         minPackQuality = P(sim)$MinPackQuality)
       
       if(P(sim)$run.tests){
         expect_true(nrow(possTerr) <= P(sim)$PackArea)
@@ -856,3 +856,7 @@ Establish <- function(sim) {
   
   return(invisible(sim))
 }
+
+stopRuleSuitability <- function(landscape, minPackQuality){
+  sum(landscape) > minPackQuality
+  } # rule to stop territories from expanding when they reached max suitability
