@@ -733,7 +733,9 @@ Establish <- function(sim) {
                          returnIndices = TRUE, circle = TRUE, stopRuleBehavior = "includeRing",
                          stopRule = stopRuleSuitability, # function defined bottom of this script
                          minPackQuality = P(sim)$MinPackQuality)
-      
+      # possTerr <- possTerr[possTerr$active == FALSE]
+
+
       if(P(sim)$run.tests){
         expect_true(nrow(possTerr) <= P(sim)$PackArea)
       }
