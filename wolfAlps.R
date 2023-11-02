@@ -712,11 +712,16 @@ Establish <- function(sim) {
       pack1alphaSex <- pack1alpha[pack1alpha$alpha == 1,] # keep only data about the alpha individuals
       packCanJoin <- pack1alphaSex[pack1alphaSex$sex != sexDisp, "packID"] # pack the disperser can join: 1 alpha of the opposite sex
       packCannotJoin <- unique(existingPack$packID)[!unique(existingPack$packID) %in% packCanJoin]
-      
+
       # In the suitabilityVal vector (suitability values for the landscape), put 0 in the places where disperser cannot go (i.e., where there are packs they cannot join and where there is already a wolf on it)
       suitabilityValUpdated <- sim$suitabilityVal # needs to keep a clean copy of suitabilityVal to update each time
-      suitabilityValUpdated[cellFromPxcorPycor(world = sim$suitabilityWorld, pxcor = otherPWolves[,1], pycor = otherPWolves[,2])] <- 0 # remove where there already are wolves
-      suitabilityValUpdated[sim$packIDWorld[] %in% packCannotJoin] <- 0 # remove cells in territories that the disperser cannot join
+
+      wh <- unique(c(cellFromPxcorPycor(world = sim$suitabilityWorld, pxcor = otherPWolves[,1], pycor = otherPWolves[,2]),
+                     which(sim$packIDWorld[] %in% packCannotJoin)))
+      suitabilityValUpdated[wh] <- 0
+
+      # suitabilityValUpdated[cellFromPxcorPycor(world = sim$suitabilityWorld, pxcor = otherPWolves[,1], pycor = otherPWolves[,2])] <- 0 # remove where there already are wolves
+      # suitabilityValUpdated[sim$packIDWorld[] %in% packCannotJoin] <- 0 # remove cells in territories that the disperser cannot join
       suitabilityValUpdated[suitabilityValUpdated != 0] <- 1 # all the other cells can have a territory on it
       suitabilityValUpdatedRaster <- setValues(sim$suitabilityRaster, suitabilityValUpdated)
       
@@ -787,9 +792,13 @@ Establish <- function(sim) {
         }
       } # end of if(NROW(possTerr) > 0)
     } # end of the loop for all the dispersers
-    
+
     # Size of the new created packs (not the joined packs)
-    newPackCreated <- sim$packIDWorld[!(sim$packIDWorld %in% c(oldPacks,0))]
+    oldPacksWZero <- c(oldPacks,0)
+
+    # Use matrix directly by using [] with sim$packIDWorld[] ... it is much faster
+    newPackCreated <- sim$packIDWorld[][!sim$packIDWorld[] %in% oldPacksWZero]
+
     if(length(newPackCreated) != 0){
       sim$out_newTerrSize <- tapply(newPackCreated, newPackCreated, length)
     }
