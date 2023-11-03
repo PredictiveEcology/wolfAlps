@@ -8,7 +8,6 @@ defineModule(sim, list(
               person("Eliot", "McIntire", email="eliot.mcintire@canada.ca", role=c("aut", "cre"))),
   childModules = character(),
   version = numeric_version("2.0.0"),
-  # spatialExtent = raster::extent(rep(NA_real_, 4)), # raster::extent(raster(paste(inputDir, "/HabitatSuitability.asc", sep = ""))),
   timeframe = as.POSIXlt(c(NA, NA)), # as.POSIXlt(c(0, 14)),
   timeunit = "year", # e.g., "year",
   citation = list("citation.bib"),
@@ -46,6 +45,30 @@ defineModule(sim, list(
   ),
   outputObjects = bindrows(
     # createsOutput(objectName = NA, objectClass = NA, desc = NA)
+    createsOutput(objectName = "out_deaths",objectClass = "matrix", desc = "Reports time and age of every wolf that died."),
+    createsOutput(objectName = "out_dispersers",objectClass = "matrix",
+        desc = "Reports time and age of every wolf that dispersed, showing how many dispersers started to disperse and how many succeed, by year"),
+    createsOutput(objectName = "out_distDisp", objectClass = "matrix", desc = "Reports time and dispersal distance of every wolf that tried to disperse"),
+    createsOutput(objectName = "out_joinCreate", objectClass = "matrix", desc = "Reports numbers of packs that were joined or were newly created, by year"),
+    createsOutput(objectName = "out_newTerrSize", objectClass = "array", desc = "Reports the size of the new territories created, only one year"),
+    createsOutput(objectName = "out_numDeadDisp", objectClass = "numeric", desc = ""),
+    createsOutput(objectName = "out_numDeadJuv", objectClass = "numeric", desc = ""),
+    createsOutput(objectName = "out_numJuvTot", objectClass = "numeric", desc = "Reports number of juveniles born per year"),
+    createsOutput(objectName = "out_statInd", objectClass = "data.frame", desc = "Reports every wolf that lived during the simulation, by year, its age, dispersing status, alpha status, and packID"),
+    createsOutput(objectName = "out_statPack", objectClass = "matrix", desc = "Reports every pack that existed during the simulation, by year, its size, its packID, and territorySize"),
+    createsOutput(objectName = "out_statSim", objectClass = "matrix", desc = "Reports several statistics for packs in each year"),
+    createsOutput(objectName = "out_terr",  objectClass = "list", desc = "list of territory maps at each year"),
+    createsOutput(objectName = "out_terrSize",  objectClass = "matrix", desc = "Reports territory size by year of each new pack created"),
+    createsOutput(objectName = "packAlphaType", objectClass = "worldMatrix", desc = "Map of Alpha Type, 0, 1, 2 or 3. See manuscript Marucco et al 2010"),
+    createsOutput(objectName = "packID", objectClass = "worldMatrix", desc = "SpatRaster output made from packIDWorld for plotting"),
+    createsOutput(objectName = "packIDWorld", objectClass = "worldMatrix", desc = "Map of packID at each given moment"),
+    createsOutput(objectName = "startDisp", objectClass = "matrix", desc = ""),
+    createsOutput(objectName = "suitabilityRaster", objectClass = "RasterLayer", desc = ""),
+    createsOutput(objectName = "suitabilityValOri", objectClass = "SpatRaster", desc = "A copy of the original HabitatSuitability object"),
+    createsOutput(objectName = "suitabilityVal", objectClass = "numeric", desc = "Extracted vector from HabitatSuitability object. This is faster computationally to work with"),
+    createsOutput(objectName = "suitabilityValGood", objectClass = "numeric", desc = "Same as suitabilityVal but with pixels below P(sim)$MeanPixelQuality converted to 0"),
+    createsOutput(objectName = "suitabilityWorld", objectClass = "numeric", desc = "Same as suitabilityVal but with pixels below P(sim)$MeanPixelQuality converted to 0"),
+    createsOutput(objectName = "wolves", objectClass = "numeric", desc = "Same as suitabilityVal but with pixels below P(sim)$MeanPixelQuality converted to 0")
   )
 ))
 
