@@ -127,9 +127,11 @@ Init <- function(sim) {
   HabitatSuitability[HabitatSuitability < 0] <- 0
 
   # Create the world onto which the wolves move using the HabitatSuitability layer
-  sim$suitabilityWorld <- createWorld(1, 436, 1, 296, data = values(HabitatSuitability) / 1000) # worldMatrix version
+  nColumns <- ncol(HabitatSuitability)
+  nRows <- nrow(HabitatSuitability)
+  sim$suitabilityWorld <- createWorld(1, nColumns, 1, nRows, data = values(HabitatSuitability) / 1000) # worldMatrix version
   # Create a rasterLayer version using world2raster to have the same coordinates as the worldMatrix
-  sim$suitabilityRaster <- world2raster(sim$suitabilityWorld) # rasterLayer version needed for the cir() function (SpaDES)
+  sim$suitabilityRaster <- world2spatRast(sim$suitabilityWorld) # rasterLayer version needed for the cir() function (SpaDES)
   # Extract the value once and use the vectorized value for the suitability
   sim$suitabilityValOri <- sim$suitabilityWorld[] # keep an original clean version
   sim$suitabilityVal <- sim$suitabilityWorld[]
@@ -139,11 +141,11 @@ Init <- function(sim) {
 
   # Create the wolves
   # Wolves information are extracted from the raster layer so they need to be scaled (same coordinates) like the suitabilityWorld (i.e., transformed into a worldMatrix)
-  initialWolvesWorld <- createWorld(1, 436, 1, 296, data = values(InitialWolves)) # wolves initial locations
+  initialWolvesWorld <- createWorld(1, nColumns, 1, nRows, data = values(InitialWolves)) # wolves initial locations
   packIDVal <- values(MapOfPacksID) # 0 and -1 are not packs
   packIDVal[packIDVal == -1] <- 0
-  sim$packIDWorld <- createWorld(1, 436, 1, 296, data = packIDVal) # initial pack locations
-  CMRWorld <- createWorld(1, 436, 1, 296, data = values(CMR)) # CMR data
+  sim$packIDWorld <- createWorld(1, nColumns, 1, nRows, data = packIDVal) # initial pack locations
+  CMRWorld <- createWorld(1, nColumns, 1, nRows, data = values(CMR)) # CMR data
 
   # Extract the wolves locations, packID and CMR data
   wolfLoc <- NLwith(world = initialWolvesWorld, agents = NetLogoR::patches(initialWolvesWorld), val = 1:61) # 1:61 = wolfID
