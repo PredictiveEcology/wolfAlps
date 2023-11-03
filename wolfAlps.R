@@ -153,7 +153,7 @@ Init <- function(sim) {
   nColumns <- ncol(HabitatSuitability)
   nRows <- nrow(HabitatSuitability)
   sim$suitabilityWorld <- createWorld(1, nColumns, 1, nRows, data = values(HabitatSuitability) / 1000) # worldMatrix version
-  # Create a rasterLayer version using world2raster to have the same coordinates as the worldMatrix
+  # Create a rasterLayer version using world2spatRast to have the same coordinates as the worldMatrix
   sim$suitabilityRaster <- world2spatRast(sim$suitabilityWorld) # rasterLayer version needed for the cir() function (SpaDES)
   # Extract the value once and use the vectorized value for the suitability
   sim$suitabilityValOri <- sim$suitabilityWorld[] # keep an original clean version
@@ -328,7 +328,7 @@ Terr <- function(sim) { # record the packIDWorld map
 ### Plots events
 Plots <- function(sim) {
   wolvesSP <- turtles2spdf(sim$wolves)
-  sim$packID <- world2raster(sim$packIDWorld)
+  sim$packID <- world2spatRast(sim$packIDWorld)
   #numPacks <- data.table(sim$out_statPack)[,list(NumPacks=length(packSize)),by=time]
 
   initialTime <- time(sim, "year") == start(sim, "year")
@@ -369,7 +369,7 @@ Plots <- function(sim) {
   Plot(sim$packID, addTo = "sim$suitabilityRaster", zero.color = "transparent",
        title = "")
 
-  sim$packAlphaTypeRas <- raster::as.factor(world2raster(sim$packAlphaType))
+  sim$packAlphaTypeRas <- raster::as.factor(world2spatRast(sim$packAlphaType))
   suppressWarnings(levels(sim$packAlphaTypeRas) <- data.frame(ID=c(0:3), alpha = c("Neither","Male", "Female", "Both")))
   #if(!initialTime)
   Plot(sim$packAlphaTypeRas, zero.color = "transparent", title = ifelse(doTitle, "Alphas present", ""),
