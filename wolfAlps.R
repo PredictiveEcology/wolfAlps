@@ -295,7 +295,7 @@ DistDisp <- function(sim) { # record the dispersal distances
 }
 
 Terr <- function(sim) { # record the packIDWorld map
-  sim$out_terr[[floor(time(sim, "year")) + 1]] <- sim$packIDWorld
+  sim$out_terr[[as.character(floor(time(sim, "year")) + 1)]] <- sim$packIDWorld
   return(invisible(sim))
 }
 
