@@ -12,7 +12,8 @@ defineModule(sim, list(
   timeunit = "year", # e.g., "year",
   citation = list("citation.bib"),
   documentation = list("README.txt", "wolfAlps.Rmd"),
-  reqdPkgs = list("NetLogoR (>= 1.0.0)", "SpaDES", "terra", "plyr", "data.table", "fpCompare", "testthat", "RColorBrewer"),
+  reqdPkgs = list("NetLogoR (>= 1.0.0)", "SpaDES", "terra", "plyr", "sf",
+                  "data.table", "fpCompare", "testthat", "RColorBrewer"),
   parameters = rbind(
     #defineParameter("paramName", "paramClass", value, min, max, "parameter description")),
     defineParameter(".plotInitialTime", "numeric", start(sim), NA, NA, "This describes the simulation time at which the first plot event should occur"),
@@ -47,7 +48,7 @@ defineModule(sim, list(
     # createsOutput(objectName = NA, objectClass = NA, desc = NA)
     createsOutput(objectName = "out_deaths",objectClass = "matrix", desc = "Reports time and age of every wolf that died."),
     createsOutput(objectName = "out_dispersers",objectClass = "matrix",
-        desc = "Reports time and age of every wolf that dispersed, showing how many dispersers started to disperse and how many succeed, by year"),
+                  desc = "Reports time and age of every wolf that dispersed, showing how many dispersers started to disperse and how many succeed, by year"),
     createsOutput(objectName = "out_distDisp", objectClass = "matrix", desc = "Reports time and dispersal distance of every wolf that tried to disperse"),
     createsOutput(objectName = "out_joinCreate", objectClass = "matrix", desc = "Reports numbers of packs that were joined or were newly created, by year"),
     createsOutput(objectName = "out_newTerrSize", objectClass = "array", desc = "Reports the size of the new territories created, only one year"),
@@ -327,7 +328,7 @@ Terr <- function(sim) { # record the packIDWorld map
 
 ### Plots events
 Plots <- function(sim) {
-  wolvesSP <- turtles2spdf(sim$wolves)
+  wolvesSP <- turtles2sf(sim$wolves)
   sim$packID <- world2spatRast(sim$packIDWorld)
   #numPacks <- data.table(sim$out_statPack)[,list(NumPacks=length(packSize)),by=time]
 
@@ -360,16 +361,17 @@ Plots <- function(sim) {
   Plot(sim$suitabilityRaster, cols = grey(0:100/100), title = ifelse(doTitle, "Habitat suitability with \npack ID & wolves", ""))
 
   # Seems to be a bug in aligning SpatialPoints and Rasters in quickPlot::Plot -- convert to raster
-  wolvesRAS <- raster::raster(sim$suitabilityRaster)
+  wolvesRAS <- terra::rast(sim$suitabilityRaster)
   wolvesRAS[] <- NA
-  wolvesP <- buffer(wolvesSP, 3)
-  wolvesRAS[wolvesP] <- 1
+  wolvesP <- sf::st_buffer(wolvesSP, 3)
+  cells <- terra::extract(wolvesRAS, coordinates(wolvesP)[, 1:2], cells = TRUE)
+  wolvesRAS[cells$cell] <- 1
   Plot(wolvesRAS, addTo = "sim$suitabilityRaster", cols = "red", # size = 3,
        title = "")
   Plot(sim$packID, addTo = "sim$suitabilityRaster", zero.color = "transparent",
        title = "")
 
-  sim$packAlphaTypeRas <- raster::as.factor(world2spatRast(sim$packAlphaType))
+  sim$packAlphaTypeRas <- terra::as.factor(world2spatRast(sim$packAlphaType))
   suppressWarnings(levels(sim$packAlphaTypeRas) <- data.frame(ID=c(0:3), alpha = c("Neither","Male", "Female", "Both")))
   #if(!initialTime)
   Plot(sim$packAlphaTypeRas, zero.color = "transparent", title = ifelse(doTitle, "Alphas present", ""),
@@ -894,4 +896,4 @@ Establish <- function(sim) {
 
 stopRuleSuitability <- function(landscape, minPackQuality){
   sum(landscape) > minPackQuality
-  } # rule to stop territories from expanding when they reached max suitability
+} # rule to stop territories from expanding when they reached max suitability
